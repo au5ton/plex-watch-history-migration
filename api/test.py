@@ -2,7 +2,7 @@ from http.server import BaseHTTPRequestHandler
 from datetime import datetime
 from plexapi.myplex import MyPlexAccount
 
-from ..lib import util
+from lib import util
 
 class handler(BaseHTTPRequestHandler):
 
