@@ -1,8 +1,8 @@
 import os
 import json
+import jsonpickle
 from http.server import BaseHTTPRequestHandler
 from urllib import parse
-import uuid
 from plexapi.myplex import MyPlexAccount
 
 class handler(BaseHTTPRequestHandler):
@@ -23,14 +23,13 @@ class UserDTO:
   def __init__(self, **kwargs):
     for key, value in kwargs.items():
       setattr(self, key, value)
-  def __str__(self):
-    return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True)
   def __repr__(self):
-    return str(self)
+    return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True)
 
 def whoami(plex_token: str) -> UserDTO:
   account = MyPlexAccount(token=plex_token)
   return UserDTO(username=account.username, email=account.email, uuid=account.uuid)
 
 if __name__ == "__main__":
-  print(whoami(plex_token=os.environ["X_PLEX_TOKEN"]))
+  #print(whoami(plex_token=os.environ["X_PLEX_TOKEN"]))
+  print(str(jsonpickle.encode(whoami(plex_token=os.environ["X_PLEX_TOKEN"]))))

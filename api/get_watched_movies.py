@@ -1,5 +1,6 @@
 import os
 import json
+import jsonpickle
 from http.server import BaseHTTPRequestHandler
 from urllib import parse
 from plexapi.myplex import MyPlexAccount
@@ -14,7 +15,7 @@ class handler(BaseHTTPRequestHandler):
     self.send_header('Content-type', 'application/json')
     self.end_headers()
     response_body = get_watched_movies(query["plex_token"], query["server_name"])
-    self.wfile.write(str(json.dumps(response_body, indent=2)).encode())
+    self.wfile.write(str(jsonpickle.encode(response_body, indent=2)).encode())
     return
 
 # see: https://stackoverflow.com/a/8187203
@@ -24,10 +25,8 @@ class WatchedMovieDTO:
   def __init__(self, **kwargs):
     for key, value in kwargs.items():
       setattr(self, key, value)
-  def __str__(self):
-    return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True)
   def __repr__(self):
-    return str(self)
+    return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True)
 
 def get_watched_movies(plex_token: str, server_name: str) -> list[WatchedMovieDTO]:
   account = MyPlexAccount(token=plex_token)
@@ -43,4 +42,5 @@ def get_watched_movies(plex_token: str, server_name: str) -> list[WatchedMovieDT
     return []
 
 if __name__ == "__main__":
-  print(get_watched_movies(plex_token=os.environ["X_PLEX_TOKEN"], server_name="mars"))
+  #print(get_watched_movies(plex_token=os.environ["X_PLEX_TOKEN"], server_name="mars"))
+  print(str(jsonpickle.encode(get_watched_movies(plex_token=os.environ["X_PLEX_TOKEN"], server_name="mars"), indent=2)))
