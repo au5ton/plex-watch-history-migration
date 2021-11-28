@@ -13,7 +13,7 @@ class handler(BaseHTTPRequestHandler):
     self.send_header('Content-type', 'application/json')
     self.end_headers()
     response_body = whoami(query["plex_token"])
-    self.wfile.write(str(json.dumps(response_body)).encode())
+    self.wfile.write(str(jsonpickle.encode(response_body)).encode())
     return
 
 class UserDTO:
