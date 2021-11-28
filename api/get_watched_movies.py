@@ -4,7 +4,6 @@ from http.server import BaseHTTPRequestHandler
 from urllib import parse
 from plexapi.myplex import MyPlexAccount
 from plexapi.server import PlexServer
-from plexapi.library import MovieSection
 from plexapi.video import Movie
 
 class handler(BaseHTTPRequestHandler):
@@ -15,10 +14,22 @@ class handler(BaseHTTPRequestHandler):
     self.send_header('Content-type', 'application/json')
     self.end_headers()
     response_body = get_watched_movies(query["plex_token"], query["server_name"])
-    self.wfile.write(str(json.dumps(response_body)).encode())
+    self.wfile.write(str(json.dumps(response_body, indent=2)).encode())
     return
 
-def get_watched_movies(plex_token: str, server_name: str) -> list[str]:
+# see: https://stackoverflow.com/a/8187203
+class WatchedMovieDTO:
+  title = str()
+  guid = str()
+  def __init__(self, **kwargs):
+    for key, value in kwargs.items():
+      setattr(self, key, value)
+  def __str__(self):
+    return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True)
+  def __repr__(self):
+    return str(self)
+
+def get_watched_movies(plex_token: str, server_name: str) -> list[WatchedMovieDTO]:
   account = MyPlexAccount(token=plex_token)
   # only the server we're looking for
   servers = [item for item in account.resources() if item.product == 'Plex Media Server' and item.name == server_name]
@@ -26,15 +37,8 @@ def get_watched_movies(plex_token: str, server_name: str) -> list[str]:
     # first server with matching name
     server = servers[0]
     plex: PlexServer = server.connect()
-    # only "movie" libraries
-    sections: list[MovieSection] = [item for item in plex.library.sections() if item.TYPE == 'movie']
-    for section in sections:
-      results: list[Movie] = section.search(unwatched=False, libtype='movie', maxresults=99999999)
-      print(f'{len(results)} results found.')
-      for movie in results:
-        print(movie.title)
-        print(movie.guids)
-    return []
+    movies: list[Movie] = plex.library.search(unwatched=False, libtype='movie', includeGuids=True, maxresults=99999999)
+    return [WatchedMovieDTO(title=item.title, guid=item.guid) for item in movies]
   else:
     return []
 
