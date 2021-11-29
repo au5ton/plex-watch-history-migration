@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 import useSWR from 'swr'
 import { useLocalstorageState } from 'rooks'
 import Box from '@mui/material/Box'
-import Container from '@mui/material/Container'
+import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
 import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
@@ -16,6 +16,7 @@ import LinearProgress from '@mui/material/LinearProgress'
 import { fetcher } from '../lib/shared'
 import * as plex from '../lib/plex'
 import { LinearProgressWithLabel } from './progress'
+import { AsyncSemaphore } from '../lib/AsyncSemaphore'
 
 // when running "npm run dev", the python functions don't execute, so we have to use prod when developing locally
 // EDIT: Not actually necessary, just use "vercel dev" instead of "yarn dev"
@@ -29,18 +30,23 @@ export function Application() {
   const { data: servers } = useSWR<string[], any>(`/api/list_servers?plex_token=${authToken}`, fetcher)
 
   const steps = ['Select servers to migrate to/from', 'Download watch history from old server', 'Connect references to new server', 'Mark as watched on new server'];
-  const [activeStep, setActiveStep] = useState(1)
+  const [activeStep, setActiveStep] = useState(0)
   const [nextButtonLocked, setNextButtonLocked] = useState(true)
 
   // step 1
-  const [sourceServerName, setSourceServerName] = useState('mars') // default: ''
-  const [destinationServerName, setDestinationServerName] = useState('jupiter') // default: ''
+  const [sourceServerName, setSourceServerName] = useState('') // default: ''
+  const [destinationServerName, setDestinationServerName] = useState('') // default: ''
   // step 2
   const [step2ButtonLocked, setStep2ButtonLocked] = useState(false)
   const [sourceMovieHistory, setSourceMovieHistory] = useState<plex.WatchedMovieDTO[]>([]);
   const [sourceShowHistory, setSourceShowHistory] = useState<plex.WatchedEpisodeDTO[]>([]);
   const [sourceMovieHistoryTotalSize, setSourceMovieHistoryTotalSize] = useState(0);
   const [sourceShowHistoryTotalSize, setSourceShowHistoryTotalSize] = useState(0);
+  // step 3
+  const [step3ButtonLocked, setStep3ButtonLocked] = useState(false)
+  const [scrobbles, setScrobbles] = useState<number[]>([])
+  const [step3Done, setStep3Done] = useState(false)
+
 
   const handleSignOut = () => {
     setAuthToken("")
@@ -59,7 +65,7 @@ export function Application() {
     await (async () => {
       let last_res: plex.PaginatedResponseDTO<plex.WatchedMovieDTO>;
       let skip = 0;
-      const chunkLimit = 200
+      const chunkLimit = 200; // TODO: make more user controlled
       do {
         last_res = await plex.get_watched_movies(authToken, sourceServerName, skip, chunkLimit);
         setSourceMovieHistory(prev => [...prev, ...last_res.watched])
@@ -72,7 +78,7 @@ export function Application() {
     await (async () => {
       let last_res: plex.PaginatedResponseDTO<plex.WatchedEpisodeDTO>;
       let skip = 0;
-      const chunkLimit = 200
+      const chunkLimit = 200; // TODO: make more user controlled
       do {
         last_res = await plex.get_watched_tv(authToken, sourceServerName, skip, chunkLimit);
         setSourceShowHistory(prev => [...prev, ...last_res.watched])
@@ -81,6 +87,69 @@ export function Application() {
       while(last_res.watched.length > 0)
     })();
 
+    setNextButtonLocked(false)
+  }
+
+  const handleStep3 = async () => {
+    console.log('step 3 start')
+    // prevent spam
+    setStep3ButtonLocked(true)
+
+    console.log('movie matching start')
+    // get rating keys for movies
+    const semaphore = new AsyncSemaphore(4);
+    for(let movie of sourceMovieHistory) {
+      await semaphore.withLockRunAndForget(async () => {
+        const res = await plex.get_movie_rating_key(authToken, destinationServerName, {
+          movieTitle: movie.title,
+          movieGuid: movie.guid,
+        })
+  
+        if(res !== null) {
+          setScrobbles(prev => [...prev, res.ratingKey])
+        }
+      })
+    }
+    await semaphore.awaitTerminate();
+    console.log('movie matching end')
+
+    console.log('show matching start')
+    // reshape data to get list of unique shows
+    const unique_shows = Array
+      // unique show guids
+      .from(new Set(sourceShowHistory.map(e => e.grandparentGuid)))
+      // show guids + titles
+      .map(grandparentGuid => {
+        const { grandparentTitle } = (sourceShowHistory.find(e => e.grandparentGuid === grandparentGuid) as plex.WatchedEpisodeDTO);
+        return ({ grandparentTitle, grandparentGuid }) as plex.ShowPostRequestBodyDTO
+      });
+    
+    // get rating keys for shows, for querying individual episodes
+    for(let show of unique_shows) {
+      const res = await plex.get_show_rating_key(authToken, destinationServerName, show)
+
+      if(res !== null) {
+        const showRatingKey = res.ratingKey
+
+        // get episode guids for this show
+        const watchedEpisodes = sourceShowHistory
+          .filter(e => e.grandparentGuid === show.grandparentGuid)
+          .map(e => e.guid);
+        
+        const res2 = await plex.get_episode_rating_keys(authToken, destinationServerName, {
+          showRatingKey,
+          showGuid: show.grandparentGuid,
+          watchedEpisodes,
+        });
+
+        setScrobbles(prev => [...prev, ...res2.map(e => e.ratingKey)])
+      }
+    }
+    console.log('show matching end')
+    
+    // final indicators
+    console.log('step 3 end')
+    setStep3Done(true)
     setNextButtonLocked(false)
   }
 
@@ -148,13 +217,38 @@ export function Application() {
       </Box>
 
       <Box sx={{ display: 'block', maxWidth: 600 }}>
-        <InputLabel id="downloadMovieHistory">
+        <InputLabel id="downloadShowHistory">
           Downloading TV watch history ({sourceShowHistoryTotalSize === 0 ? '???' : sourceShowHistoryTotalSize} episodes)
         </InputLabel>
-        <LinearProgressWithLabel aria-describedby="downloadMovieHistory" variant="determinate" value={sourceShowHistory.length/sourceShowHistoryTotalSize*100} />
+        <LinearProgressWithLabel aria-describedby="downloadShowHistory" variant="determinate" value={sourceShowHistory.length/sourceShowHistoryTotalSize*100} />
       </Box>
 
       <Button variant="contained" size="small" onClick={handleStep2} disabled={step2ButtonLocked}>Start Download</Button>
+    </Box>
+  )
+
+  const step3Content = (
+    <Box sx={{ display: 'block' }}>
+      <Box sx={{ display: 'block', maxWidth: 600 }}>
+        <InputLabel id="matchContentHistory">
+          Matching content across servers...
+        </InputLabel>
+        <LinearProgressWithLabel aria-describedby="matchContentHistory" variant="determinate" value={scrobbles.length/(sourceMovieHistoryTotalSize+sourceShowHistoryTotalSize)*100} />
+      </Box>
+
+      {
+        step3Done && scrobbles.length === (sourceMovieHistoryTotalSize+sourceShowHistoryTotalSize) ? 
+        <Alert severity="success">All movies and episodes matched!</Alert>
+        :
+        null
+      }
+      {
+        step3Done && scrobbles.length !== (sourceMovieHistoryTotalSize+sourceShowHistoryTotalSize) ? 
+        <Alert severity="warning">Some movies and/or episodes did not match.</Alert>
+        :
+        null
+      }
+      <Button variant="contained" size="small" onClick={handleStep3} disabled={step3ButtonLocked}>Start Matching</Button>
     </Box>
   )
 
@@ -176,6 +270,7 @@ export function Application() {
             <StepContent>
               { index === 0 ? step1Content : null }
               { index === 1 ? step2Content : null }
+              { index === 2 ? step3Content : null }
             </StepContent>
           </Step>
         );

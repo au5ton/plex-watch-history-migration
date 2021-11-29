@@ -65,13 +65,16 @@ export interface MoviePostRequestBodyDTO {
   movieGuid: String;
 }
 
-export interface GuidRatingKeyPairDTO {
-  title: string;
+export interface GuidRatingKeyPairPrimitiveDTO {
   guid: string;
-  ratingKey: string;
+  ratingKey: number;
 }
 
-export async function get_movie_rating_key(plex_token: string, server_name: string, request: MoviePostRequestBodyDTO): Promise<GuidRatingKeyPairDTO> {
+export interface GuidRatingKeyPairDTO extends GuidRatingKeyPairPrimitiveDTO {
+  title: string;
+}
+
+export async function get_movie_rating_key(plex_token: string, server_name: string, request: MoviePostRequestBodyDTO): Promise<GuidRatingKeyPairDTO | null> {
   let res = await fetch(`/api/get_movie_rating_key?plex_token=${plex_token}&server_name=${server_name}`, {
     method: 'POST',
     body: JSON.stringify(request)
@@ -84,7 +87,7 @@ export interface ShowPostRequestBodyDTO {
   grandparentGuid: string;
 }
 
-export async function get_show_rating_key(plex_token: string, server_name: string, request: ShowPostRequestBodyDTO): Promise<GuidRatingKeyPairDTO> {
+export async function get_show_rating_key(plex_token: string, server_name: string, request: ShowPostRequestBodyDTO): Promise<GuidRatingKeyPairDTO | null> {
   let res = await fetch(`/api/get_show_rating_key?plex_token=${plex_token}&server_name=${server_name}`, {
     method: 'POST',
     body: JSON.stringify(request)
@@ -98,9 +101,7 @@ export interface EpisodePostRequestBodyDTO {
   watchedEpisodes: string[];
 }
 
-export interface EpisodeGuidRatingKeyPairDTO {
-  guid: string;
-  ratingKey: number;
+export interface EpisodeGuidRatingKeyPairDTO extends GuidRatingKeyPairPrimitiveDTO {
   forServer: string;
   formatted: string;
 }
