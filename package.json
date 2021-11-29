@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@mui/material": "^5.2.1",
+    "gretchen": "^1.5.0",
     "next": "^11.1.2",
     "plex-oauth": "^2.0.1",
     "react": "17.0.2",

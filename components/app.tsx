@@ -12,7 +12,6 @@ import Stepper from '@mui/material/Stepper'
 import Step from '@mui/material/Step'
 import StepLabel from '@mui/material/StepLabel'
 import StepContent from '@mui/material/StepContent'
-import LinearProgress from '@mui/material/LinearProgress'
 import { fetcher } from '../lib/shared'
 import * as plex from '../lib/plex'
 import { LinearProgressWithLabel } from './progress'
@@ -49,7 +48,7 @@ export function Application() {
 
 
   const handleSignOut = () => {
-    setAuthToken("")
+    setAuthToken('')
     router.reload()
   }
 
@@ -65,7 +64,7 @@ export function Application() {
     await (async () => {
       let last_res: plex.PaginatedResponseDTO<plex.WatchedMovieDTO>;
       let skip = 0;
-      const chunkLimit = 200; // TODO: make more user controlled
+      const chunkLimit = 100; // TODO: make more user controlled
       do {
         last_res = await plex.get_watched_movies(authToken, sourceServerName, skip, chunkLimit);
         setSourceMovieHistory(prev => [...prev, ...last_res.watched])
@@ -78,7 +77,7 @@ export function Application() {
     await (async () => {
       let last_res: plex.PaginatedResponseDTO<plex.WatchedEpisodeDTO>;
       let skip = 0;
-      const chunkLimit = 200; // TODO: make more user controlled
+      const chunkLimit = 100; // TODO: make more user controlled
       do {
         last_res = await plex.get_watched_tv(authToken, sourceServerName, skip, chunkLimit);
         setSourceShowHistory(prev => [...prev, ...last_res.watched])
@@ -97,7 +96,7 @@ export function Application() {
 
     console.log('movie matching start')
     // get rating keys for movies
-    const semaphore = new AsyncSemaphore(4);
+    const semaphore = new AsyncSemaphore(3);
     for(let movie of sourceMovieHistory) {
       await semaphore.withLockRunAndForget(async () => {
         const res = await plex.get_movie_rating_key(authToken, destinationServerName, {
@@ -105,12 +104,12 @@ export function Application() {
           movieGuid: movie.guid,
         })
   
-        if(res !== null) {
+        if(res) {
           setScrobbles(prev => [...prev, res.ratingKey])
         }
       })
     }
-    await semaphore.awaitTerminate();
+    
     console.log('movie matching end')
 
     console.log('show matching start')
@@ -126,28 +125,31 @@ export function Application() {
     
     // get rating keys for shows, for querying individual episodes
     for(let show of unique_shows) {
-      const res = await plex.get_show_rating_key(authToken, destinationServerName, show)
+      await semaphore.withLockRunAndForget(async () => {
+        const res = await plex.get_show_rating_key(authToken, destinationServerName, show)
 
-      if(res !== null) {
-        const showRatingKey = res.ratingKey
+        if(res) {
+          const showRatingKey = res.ratingKey
 
-        // get episode guids for this show
-        const watchedEpisodes = sourceShowHistory
-          .filter(e => e.grandparentGuid === show.grandparentGuid)
-          .map(e => e.guid);
-        
-        const res2 = await plex.get_episode_rating_keys(authToken, destinationServerName, {
-          showRatingKey,
-          showGuid: show.grandparentGuid,
-          watchedEpisodes,
-        });
+          // get episode guids for this show
+          const watchedEpisodes = sourceShowHistory
+            .filter(e => e.grandparentGuid === show.grandparentGuid)
+            .map(e => e.guid);
+          
+          const res2 = await plex.get_episode_rating_keys(authToken, destinationServerName, {
+            showRatingKey,
+            showGuid: show.grandparentGuid,
+            watchedEpisodes,
+          });
 
-        setScrobbles(prev => [...prev, ...res2.map(e => e.ratingKey)])
-      }
+          setScrobbles(prev => [...prev, ...res2.map(e => e.ratingKey)])
+        }
+      })
     }
     console.log('show matching end')
     
     // final indicators
+    await semaphore.awaitTerminate();
     console.log('step 3 end')
     setStep3Done(true)
     setNextButtonLocked(false)
