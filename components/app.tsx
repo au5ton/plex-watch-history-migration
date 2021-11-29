@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/router'
 import useSWR from 'swr'
 import { useLocalstorageState } from 'rooks'
 import Box from '@mui/material/Box'
+import Container from '@mui/material/Container'
 import Button from '@mui/material/Button'
 import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
@@ -10,36 +12,79 @@ import Stepper from '@mui/material/Stepper'
 import Step from '@mui/material/Step'
 import StepLabel from '@mui/material/StepLabel'
 import StepContent from '@mui/material/StepContent'
+import LinearProgress from '@mui/material/LinearProgress'
 import { fetcher } from '../lib/shared'
 import * as plex from '../lib/plex'
+import { LinearProgressWithLabel } from './progress'
 
 // when running "npm run dev", the python functions don't execute, so we have to use prod when developing locally
 // EDIT: Not actually necessary, just use "vercel dev" instead of "yarn dev"
 //const BASE_URL = environment === 'development' ? 'https://plex-watch-history-migration-au5ton.vercel.app' : ''
 
 export function Application() {
-  const [authToken, _] = useLocalstorageState<string>('X_PLEX_TOKEN', '')
+  const router = useRouter()
+  const [authToken, setAuthToken] = useLocalstorageState<string>('X_PLEX_TOKEN', '')
   const isSignedIn = authToken !== ''
   const { data: user } = useSWR<plex.UserDTO, any>(`/api/whoami?plex_token=${authToken}`, fetcher)
   const { data: servers } = useSWR<string[], any>(`/api/list_servers?plex_token=${authToken}`, fetcher)
 
   const steps = ['Select servers to migrate to/from', 'Download watch history from old server', 'Connect references to new server', 'Mark as watched on new server'];
-  const [activeStep, setActiveStep] = useState(0)
+  const [activeStep, setActiveStep] = useState(1)
   const [nextButtonLocked, setNextButtonLocked] = useState(true)
 
-  const [sourceServerName, setSourceServerName] = useState('')
-  const [destinationServerName, setDestinationServerName] = useState('')
-  //console.log(data)
+  // step 1
+  const [sourceServerName, setSourceServerName] = useState('mars') // default: ''
+  const [destinationServerName, setDestinationServerName] = useState('jupiter') // default: ''
+  // step 2
+  const [step2ButtonLocked, setStep2ButtonLocked] = useState(false)
+  const [sourceMovieHistory, setSourceMovieHistory] = useState<plex.WatchedMovieDTO[]>([]);
+  const [sourceShowHistory, setSourceShowHistory] = useState<plex.WatchedEpisodeDTO[]>([]);
+  const [sourceMovieHistoryTotalSize, setSourceMovieHistoryTotalSize] = useState(0);
+  const [sourceShowHistoryTotalSize, setSourceShowHistoryTotalSize] = useState(0);
 
-  const handleClick = async () => {
-    if(isSignedIn) {
-      console.log('click')
-      //let data = await plex.get_all_watched_movies(authToken, 'mars');
-      let data = await plex.get_all_watched_tv(authToken, 'mars');
-      console.log(data)
-    }
+  const handleSignOut = () => {
+    setAuthToken("")
+    router.reload()
   }
 
+  const handleStep2 = async () => {
+    // prevent spam
+    setStep2ButtonLocked(true)
+
+    // get+set totals
+    setSourceMovieHistoryTotalSize((await plex.get_watched_movies(authToken, sourceServerName, 0, 2)).totalSize);
+    setSourceShowHistoryTotalSize((await plex.get_watched_tv(authToken, sourceServerName, 0, 2)).totalSize);
+
+    // download movies
+    await (async () => {
+      let last_res: plex.PaginatedResponseDTO<plex.WatchedMovieDTO>;
+      let skip = 0;
+      const chunkLimit = 200
+      do {
+        last_res = await plex.get_watched_movies(authToken, sourceServerName, skip, chunkLimit);
+        setSourceMovieHistory(prev => [...prev, ...last_res.watched])
+        skip += last_res.watched.length;
+      }
+      while(last_res.watched.length > 0)
+    })();
+
+    // download shows
+    await (async () => {
+      let last_res: plex.PaginatedResponseDTO<plex.WatchedEpisodeDTO>;
+      let skip = 0;
+      const chunkLimit = 200
+      do {
+        last_res = await plex.get_watched_tv(authToken, sourceServerName, skip, chunkLimit);
+        setSourceShowHistory(prev => [...prev, ...last_res.watched])
+        skip += last_res.watched.length;
+      }
+      while(last_res.watched.length > 0)
+    })();
+
+    setNextButtonLocked(false)
+  }
+
+  // Input validation
   useEffect(() => {
     if(activeStep === 0) {
       setNextButtonLocked(!(sourceServerName !== "" && destinationServerName !== ""))
@@ -94,22 +139,33 @@ export function Application() {
   )
 
   const step2Content = (
-    <>
-    <p>
-    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam non ante sed magna faucibus egestas id eget metus. Curabitur nec imperdiet leo. Morbi in odio purus. Fusce vel blandit libero. Aenean finibus pulvinar odio, nec condimentum turpis suscipit ac. Pellentesque facilisis iaculis nibh, quis vestibulum est sagittis ut. Vivamus placerat finibus mauris pulvinar pharetra. Vivamus volutpat arcu id nulla luctus, eget luctus enim feugiat. Nullam pharetra leo vel libero sagittis, nec posuere sapien ullamcorper. 
-    </p>
-    <p>
-    Nullam ultricies sapien ligula, sed commodo elit interdum at. Maecenas consequat at diam vitae lacinia. Pellentesque aliquet cursus sem, eget aliquam sem consectetur ut. Etiam tristique neque rutrum odio aliquet tincidunt in non felis. Pellentesque lacinia augue ut vehicula semper. Nunc tempus est nec lectus pulvinar lacinia. Integer tempus quam eu est porttitor, eu interdum arcu mattis. Maecenas vel porta lorem, eu faucibus arcu. Fusce at condimentum odio, vel aliquam tortor.
-    </p>
-    <p>
-    Donec euismod et augue a pellentesque. Duis non ultrices libero, et semper lectus. Mauris ullamcorper tortor in enim feugiat ultricies. Fusce dignissim elit quam, sit amet imperdiet magna pharetra nec. Nam cursus dictum purus sit amet tempus. Suspendisse id tincidunt lectus. Mauris consectetur felis at felis sagittis, in ultrices tellus feugiat. Suspendisse potenti. Aenean in leo risus. 
-    </p>
-    </>
+    <Box sx={{ display: 'block' }}>
+      <Box sx={{ display: 'block', maxWidth: 600 }}>
+        <InputLabel id="downloadMovieHistory">
+          Downloading Movie watch history ({sourceMovieHistoryTotalSize === 0 ? '???' : sourceMovieHistoryTotalSize} movies)
+        </InputLabel>
+        <LinearProgressWithLabel aria-describedby="downloadMovieHistory" variant="determinate" value={sourceMovieHistory.length/sourceMovieHistoryTotalSize*100} />
+      </Box>
+
+      <Box sx={{ display: 'block', maxWidth: 600 }}>
+        <InputLabel id="downloadMovieHistory">
+          Downloading TV watch history ({sourceShowHistoryTotalSize === 0 ? '???' : sourceShowHistoryTotalSize} episodes)
+        </InputLabel>
+        <LinearProgressWithLabel aria-describedby="downloadMovieHistory" variant="determinate" value={sourceShowHistory.length/sourceShowHistoryTotalSize*100} />
+      </Box>
+
+      <Button variant="contained" size="small" onClick={handleStep2} disabled={step2ButtonLocked}>Start Download</Button>
+    </Box>
   )
 
   return (
     <>
-    <p>Signed in as: <code>{user?.username}</code> or <code>{user?.email}</code></p>
+    <p>
+      Signed in as: <code>{user?.username}</code> or <code>{user?.email}</code>.
+    </p>
+    <p>
+    <Button variant="contained" size="small" onClick={handleSignOut} disabled={activeStep > 0}>Sign Out</Button>
+    </p>
     
     {/* Stepper indicator */}
     <Stepper activeStep={activeStep} orientation="vertical">
