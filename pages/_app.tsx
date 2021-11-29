@@ -18,7 +18,7 @@ function useTheme() {
           primary: {
             main: '#e5a00d',
           },
-          mode: prefersDarkMode ? 'dark' : 'light'
+          mode: prefersDarkMode ? 'dark' : 'dark' // 'light'
         },
       }),
     [prefersDarkMode],

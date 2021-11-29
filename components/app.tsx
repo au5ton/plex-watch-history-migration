@@ -12,7 +12,7 @@ import Stepper from '@mui/material/Stepper'
 import Step from '@mui/material/Step'
 import StepLabel from '@mui/material/StepLabel'
 import StepContent from '@mui/material/StepContent'
-import { fetcher } from '../lib/shared'
+import { chunkArray, fetcher } from '../lib/shared'
 import * as plex from '../lib/plex'
 import { LinearProgressWithLabel } from './progress'
 import { AsyncSemaphore } from '../lib/AsyncSemaphore'
@@ -45,7 +45,10 @@ export function Application() {
   const [step3ButtonLocked, setStep3ButtonLocked] = useState(false)
   const [scrobbles, setScrobbles] = useState<number[]>([])
   const [step3Done, setStep3Done] = useState(false)
-
+  // step 4
+  const [step4ButtonLocked, setStep4ButtonLocked] = useState(false)
+  const [completedScrobbles, setCompletedScrobbles] = useState(0)
+  const [step4Done, setStep4Done] = useState(false)
 
   const handleSignOut = () => {
     setAuthToken('')
@@ -90,11 +93,9 @@ export function Application() {
   }
 
   const handleStep3 = async () => {
-    console.log('step 3 start')
     // prevent spam
     setStep3ButtonLocked(true)
 
-    console.log('movie matching start')
     // get rating keys for movies
     const semaphore = new AsyncSemaphore(3);
     for(let movie of sourceMovieHistory) {
@@ -110,9 +111,6 @@ export function Application() {
       })
     }
     
-    console.log('movie matching end')
-
-    console.log('show matching start')
     // reshape data to get list of unique shows
     const unique_shows = Array
       // unique show guids
@@ -146,12 +144,33 @@ export function Application() {
         }
       })
     }
-    console.log('show matching end')
     
     // final indicators
     await semaphore.awaitTerminate();
-    console.log('step 3 end')
     setStep3Done(true)
+    setNextButtonLocked(false)
+  }
+
+  const handleStep4 = async () => {
+    // prevent spam
+    setStep4ButtonLocked(true)
+
+    // do the thing
+    const semaphore = new AsyncSemaphore(2);
+    const chunkSize = Math.floor(scrobbles.length / 50)
+    for(let chunk of chunkArray(scrobbles, chunkSize)) {
+      await semaphore.withLockRunAndForget(async () => {
+        const res = await plex.scrobble(authToken, destinationServerName, {
+          ratingKeys: chunk
+        })
+        // count the number of successes
+        setCompletedScrobbles(prev => prev + res.filter(e => typeof e === 'number' && e >= 200 && e <= 299).length)
+      })
+    }
+
+    // final indicators
+    await semaphore.awaitTerminate()
+    setStep4Done(true)
     setNextButtonLocked(false)
   }
 
@@ -254,6 +273,31 @@ export function Application() {
     </Box>
   )
 
+  const step4Content = (
+    <Box sx={{ display: 'block' }}>
+      <Box sx={{ display: 'block', maxWidth: 600 }}>
+        <InputLabel id="scrobbleProgress">
+          Marking content...
+        </InputLabel>
+        <LinearProgressWithLabel aria-describedby="scrobbleProgress" variant="determinate" value={completedScrobbles/scrobbles.length*100} />
+      </Box>
+
+      {
+        step4Done && completedScrobbles === scrobbles.length ? 
+        <Alert severity="success">All matched content was marked! (Some may still be missing because it failed to match in Step 3)</Alert>
+        :
+        null
+      }
+      {
+        step4Done && completedScrobbles !== scrobbles.length ? 
+        <Alert severity="warning">Some matched content failed to be marked. (Even more may still be missing because it failed to match in Step 3)</Alert>
+        :
+        null
+      }
+      <Button variant="contained" size="small" onClick={handleStep4} disabled={step4ButtonLocked}>Start Marking</Button>
+    </Box>
+  )
+
   return (
     <>
     <p>
@@ -273,6 +317,7 @@ export function Application() {
               { index === 0 ? step1Content : null }
               { index === 1 ? step2Content : null }
               { index === 2 ? step3Content : null }
+              { index === 3 ? step4Content : null }
             </StepContent>
           </Step>
         );
