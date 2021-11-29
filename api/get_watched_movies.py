@@ -7,6 +7,11 @@ from plexapi.library import MovieSection
 from plexapi.myplex import MyPlexAccount
 from plexapi.server import PlexServer
 from plexapi.video import Movie
+from typing import Any
+
+# get from dictionary with some safeguards
+def safeget(dic: dict, key: str, default: Any = None):
+  return dic[key] if key in dic else default
 
 class handler(BaseHTTPRequestHandler):
 
@@ -16,7 +21,12 @@ class handler(BaseHTTPRequestHandler):
     self.send_header('Content-type', 'application/json')
     self.send_header('Access-Control-Allow-Origin', '*')
     self.end_headers()
-    response_body = get_watched_movies(query["plex_token"], query["server_name"])
+    response_body = get_watched_movies(
+      query["plex_token"],
+      query["server_name"],
+      skip=int(safeget(query, "skip", default=0)),
+      limit=int(safeget(query, "limit", default=10))
+      )
     self.wfile.write(str(jsonpickle.encode(response_body)).encode())
     return
 
@@ -30,7 +40,9 @@ class WatchedMovieDTO:
   def __repr__(self):
     return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True)
 
-def get_watched_movies(plex_token: str, server_name: str) -> list[WatchedMovieDTO]:
+def get_watched_movies(plex_token: str, server_name: str, skip=0, limit=10) -> list[WatchedMovieDTO]:
+  print(skip)
+  print(limit)
   account = MyPlexAccount(token=plex_token)
   # only the server we're looking for
   servers = [item for item in account.resources() if item.product == 'Plex Media Server' and item.name == server_name]
@@ -42,7 +54,7 @@ def get_watched_movies(plex_token: str, server_name: str) -> list[WatchedMovieDT
     # only "movie" libraries
     sections: list[MovieSection] = [item for item in plex.library.sections() if item.TYPE == 'movie']
     for section in sections:
-      movies: list[Movie] = section.search(unwatched=False, libtype='movie', sort='titleSort', includeGuids=True, maxresults=99999999)
+      movies: list[Movie] = section.search(unwatched=False, libtype='movie', sort='titleSort', includeGuids=True, container_start=skip, container_size=limit, maxresults=limit)
       results += [WatchedMovieDTO(title=item.title, guid=item.guid) for item in movies]
     return results
   else:
