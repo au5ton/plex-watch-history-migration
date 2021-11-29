@@ -83,9 +83,9 @@ def get_movie_rating_key(plex_token: str, server_name: str, request: MoviePostRe
           guid=movie.guid,
           ratingKey=movie.ratingKey,
         )
-    return []
+    return None
   else:
-    return []
+    return None
 
 if __name__ == "__main__":
   print(str(jsonpickle.encode(get_movie_rating_key(plex_token=os.environ["X_PLEX_TOKEN"], server_name="mars", request=MoviePostRequestBodyDTO({

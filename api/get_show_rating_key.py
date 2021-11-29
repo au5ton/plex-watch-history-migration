@@ -83,9 +83,9 @@ def get_show_rating_key(plex_token: str, server_name: str, request: ShowPostRequ
           guid=show.guid,
           ratingKey=show.ratingKey,
         )
-    return []
+    return None
   else:
-    return []
+    return None
 
 if __name__ == "__main__":
   # print(str(jsonpickle.encode(get_tv_rating_keys(plex_token=os.environ["X_PLEX_TOKEN"], server_name="mars", request=ShowPostRequestBodyDTO({
