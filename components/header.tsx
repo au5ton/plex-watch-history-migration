@@ -1,4 +1,4 @@
-import { Typography } from '@mui/material'
+import Container from '@mui/material/Container'
 import { useTheme } from '@mui/system'
 import { clientInformation } from '../lib/shared'
 
@@ -6,7 +6,9 @@ export function Header() {
   const theme = useTheme()
   return (
     <header>
-      <h1 style={{ color: theme.palette.primary.main, padding: '0 1rem' }}>{clientInformation.product}</h1>
+      <Container maxWidth="lg">
+        <h1 style={{ color: theme.palette.primary.main }}>{clientInformation.product}</h1>
+      </Container>
     </header>
   )
 }

@@ -126,9 +126,6 @@ export function Application() {
       })}
     </Stepper>
 
-    {/* Stepper content */}
-    
-
     {/* Stepper controls */}
     <Box sx={{ display: 'flex', flexDirection: 'row', pt: 2 }}>
       {/* <Button
