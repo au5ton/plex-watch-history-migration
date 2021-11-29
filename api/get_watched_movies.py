@@ -3,6 +3,7 @@ import json
 import jsonpickle
 from http.server import BaseHTTPRequestHandler
 from urllib import parse
+from plexapi.library import MovieSection
 from plexapi.myplex import MyPlexAccount
 from plexapi.server import PlexServer
 from plexapi.video import Movie
@@ -37,8 +38,13 @@ def get_watched_movies(plex_token: str, server_name: str) -> list[WatchedMovieDT
     # first server with matching name
     server = servers[0]
     plex: PlexServer = server.connect()
-    movies: list[Movie] = plex.library.search(unwatched=False, libtype='movie', includeGuids=True, maxresults=99999999)
-    return [WatchedMovieDTO(title=item.title, guid=item.guid) for item in movies]
+    results: list[WatchedMovieDTO] = []
+    # only "movie" libraries
+    sections: list[MovieSection] = [item for item in plex.library.sections() if item.TYPE == 'movie']
+    for section in sections:
+      movies: list[Movie] = section.search(unwatched=False, libtype='movie', includeGuids=True, maxresults=99999999)
+      results += [WatchedMovieDTO(title=item.title, guid=item.guid) for item in movies]
+    return results
   else:
     return []
 
