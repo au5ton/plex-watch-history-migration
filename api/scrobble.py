@@ -63,7 +63,7 @@ def scrobble(plex_token: str, server_name: str, request: ScrobblePostRequestBody
     plex: PlexServer = server.connect()
 
     # generate list of scrobble URLs  
-    urls = [f'{plex._baseurl}/:/scrobble?key={ratingKey}&identifier=com.plexapp.plugins.library&X-Plex-Token={plex_token}' for ratingKey in request.episodeRatingKeys]
+    urls = [f'{plex._baseurl}/:/scrobble?key={ratingKey}&identifier=com.plexapp.plugins.library&X-Plex-Token={plex_token}' for ratingKey in request.ratingKeys]
     out = []
 
     def do_scrobble(url):
@@ -86,7 +86,6 @@ def scrobble(plex_token: str, server_name: str, request: ScrobblePostRequestBody
     return []
 
 if __name__ == "__main__":
-  print(str(jsonpickle.encode(scrobble(plex_token=os.environ["X_PLEX_TOKEN"], server_name="mars", request=ScrobblePostRequestBodyDTO({
-    "episodeRatingKeys": [22135, 26002, 22136],
-    "grandparentGuid": "plex://show/5d9c07f72df347001e3a70b4",
+  print(str(jsonpickle.encode(scrobble(plex_token=os.environ["X_PLEX_TOKEN"], server_name="jupiter", request=ScrobblePostRequestBodyDTO({
+    "ratingKeys": [2150, 2151, 2152],
   })), indent=2)))
