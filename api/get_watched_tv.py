@@ -77,7 +77,7 @@ def get_watched_tv(plex_token: str, server_name: str, skip=0, limit=10) -> Pagin
     # TODO: this doesn't work if you have multiple TV section libraries, so for now, just don't
     for section in sections:
       totalSize = fetch_total_size(section.key)
-      episodes: list[Episode] = section.search(unwatched=False, libtype='episode', includeGuids=True, container_start=skip, container_size=limit, maxresults=limit)
+      episodes: list[Episode] = section.search(unwatched=False, libtype='episode', sort='lastViewedAt:desc', includeGuids=True, container_start=skip, container_size=limit, maxresults=limit)
       results += [
         WatchedEpisodeDTO(
           grandparentTitle=item.grandparentTitle,

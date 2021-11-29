@@ -71,7 +71,7 @@ def get_watched_movies(plex_token: str, server_name: str, skip=0, limit=10) -> l
     # TODO: this doesn't work if you have multiple Movie section libraries, so for now, just don't
     for section in sections:
       totalSize = fetch_total_size(section.key)
-      movies: list[Movie] = section.search(unwatched=False, libtype='movie', sort='titleSort', includeGuids=True, container_start=skip, container_size=limit, maxresults=limit)
+      movies: list[Movie] = section.search(unwatched=False, libtype='movie', sort='lastViewedAt:desc', includeGuids=True, container_start=skip, container_size=limit, maxresults=limit)
       results += [WatchedMovieDTO(title=item.title, guid=item.guid) for item in movies]
     return PaginatedResponseDTO(watched=results, totalSize=totalSize)
   else:
