@@ -33,6 +33,7 @@ class handler(BaseHTTPRequestHandler):
 # see: https://stackoverflow.com/a/8187203
 class WatchedEpisodeDTO:
   grandparentTitle = str() # Name of the show for the episode
+  grandparentGuid = str() # Plex GUID for the show
   parentIndex = int() # Season number of episode
   index = int() # Episode number
   formatted = str()
@@ -53,13 +54,14 @@ def get_watched_tv(plex_token: str, server_name: str, skip=0, limit=10) -> list[
     server = servers[0]
     plex: PlexServer = server.connect()
     results: list[WatchedEpisodeDTO] = []
-    # only "movie" libraries
+    # only "tv" libraries
     sections: list[ShowSection] = [item for item in plex.library.sections() if item.TYPE == 'show']
     for section in sections:
       episodes: list[Episode] = section.search(unwatched=False, libtype='episode', includeGuids=True, container_start=skip, container_size=limit, maxresults=limit)
       results += [
         WatchedEpisodeDTO(
           grandparentTitle=item.grandparentTitle,
+          grandparentGuid=item.grandparentGuid,
           parentIndex=item.parentIndex,
           index=item.index,
           guid=item.guid)
