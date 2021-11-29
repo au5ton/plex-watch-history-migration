@@ -1,7 +1,54 @@
 import Head from 'next/head'
 import Image from 'next/image'
+import { PlexOauth, IPlexClientDetails } from 'plex-oauth'
+
+// 
+
+const clientInformation: IPlexClientDetails = {
+  clientIdentifier: "io.github.au5ton.plex-watch-history-migration", // This is a unique identifier used to identify your app with Plex.
+  product: "Plex Watch History Migration (au5ton)",              // Name of your application
+  device: "browser",            // The type of device your application is running on
+  version: "1",                               // Version of your application
+  forwardUrl: "https://localhost:3000",       // Url to forward back to after signing in.
+  platform: "Web",                            // Optional - Platform your application runs on - Defaults to 'Web'
+}
+
+const plexOauth = new PlexOauth(clientInformation);
 
 export default function Home() {
+
+  const handleClick = async () => {
+    try {
+      const oauthWindow = window.open(
+        window.location.toString(),
+        "_blank",
+        `toolbar=0,
+          location=0,
+          status=0,
+          menubar=0,
+          scrollbars=1,
+          resizable=1,
+          width=500,
+          height=500`
+      );
+
+      const [hostedUILink, pinId] = await plexOauth.requestHostedLoginURL();
+
+      console.log(hostedUILink)
+
+      oauthWindow?.location.replace(hostedUILink)
+
+      const authToken = await plexOauth.checkForAuthToken(pinId, 2000, 30);
+
+      oauthWindow?.close()
+
+      console.log(authToken);
+    }
+    catch(err) {
+      console.warn(err)
+    }
+  }
+
   return (
     <div>
       <Head>
@@ -12,6 +59,7 @@ export default function Home() {
 
       <main>
         <h1>Hello</h1>
+        <button onClick={handleClick}>Sign In</button>
       </main>
     </div>
   )
