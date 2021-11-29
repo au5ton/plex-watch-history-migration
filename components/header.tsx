@@ -6,7 +6,7 @@ export function Header() {
   const theme = useTheme()
   return (
     <header>
-      <h1 style={{ color: theme.palette.primary.main }}>{clientInformation.product}</h1>
+      <h1 style={{ color: theme.palette.primary.main, padding: '0 1rem' }}>{clientInformation.product}</h1>
     </header>
   )
 }

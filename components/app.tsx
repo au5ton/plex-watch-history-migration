@@ -9,6 +9,7 @@ import MenuItem from '@mui/material/MenuItem'
 import Stepper from '@mui/material/Stepper'
 import Step from '@mui/material/Step'
 import StepLabel from '@mui/material/StepLabel'
+import StepContent from '@mui/material/StepContent'
 import { fetcher } from '../lib/shared'
 import * as plex from '../lib/plex'
 
@@ -50,23 +51,8 @@ export function Application() {
     setActiveStep(prev => prev + 1)
   }
 
-  return (
-    <>
-    <p>Signed in as: <code>{user?.username}</code> or <code>{user?.email}</code></p>
-    
-    {/* Stepper indicator */}
-    <Stepper activeStep={activeStep}>
-      {steps.map((label, index) => {
-        return (
-          <Step key={label}>
-            <StepLabel>{label}</StepLabel>
-          </Step>
-        );
-      })}
-    </Stepper>
-
-    {/* Stepper content */}
-    <Box sx={{ display: activeStep === 0 ? 'block' : 'none'}} m={1}>
+  const step1Content = (
+    <Box sx={{ display: 'block' }} m={1}>
       <InputLabel id="sourceServerName">
         Source server
       </InputLabel>
@@ -105,6 +91,43 @@ export function Application() {
         )}
       </Select>
     </Box>
+  )
+
+  const step2Content = (
+    <>
+    <p>
+    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam non ante sed magna faucibus egestas id eget metus. Curabitur nec imperdiet leo. Morbi in odio purus. Fusce vel blandit libero. Aenean finibus pulvinar odio, nec condimentum turpis suscipit ac. Pellentesque facilisis iaculis nibh, quis vestibulum est sagittis ut. Vivamus placerat finibus mauris pulvinar pharetra. Vivamus volutpat arcu id nulla luctus, eget luctus enim feugiat. Nullam pharetra leo vel libero sagittis, nec posuere sapien ullamcorper. 
+    </p>
+    <p>
+    Nullam ultricies sapien ligula, sed commodo elit interdum at. Maecenas consequat at diam vitae lacinia. Pellentesque aliquet cursus sem, eget aliquam sem consectetur ut. Etiam tristique neque rutrum odio aliquet tincidunt in non felis. Pellentesque lacinia augue ut vehicula semper. Nunc tempus est nec lectus pulvinar lacinia. Integer tempus quam eu est porttitor, eu interdum arcu mattis. Maecenas vel porta lorem, eu faucibus arcu. Fusce at condimentum odio, vel aliquam tortor.
+    </p>
+    <p>
+    Donec euismod et augue a pellentesque. Duis non ultrices libero, et semper lectus. Mauris ullamcorper tortor in enim feugiat ultricies. Fusce dignissim elit quam, sit amet imperdiet magna pharetra nec. Nam cursus dictum purus sit amet tempus. Suspendisse id tincidunt lectus. Mauris consectetur felis at felis sagittis, in ultrices tellus feugiat. Suspendisse potenti. Aenean in leo risus. 
+    </p>
+    </>
+  )
+
+  return (
+    <>
+    <p>Signed in as: <code>{user?.username}</code> or <code>{user?.email}</code></p>
+    
+    {/* Stepper indicator */}
+    <Stepper activeStep={activeStep} orientation="vertical">
+      {steps.map((label, index) => {
+        return (
+          <Step key={label}>
+            <StepLabel>{label}</StepLabel>
+            <StepContent>
+              { index === 0 ? step1Content : null }
+              { index === 1 ? step2Content : null }
+            </StepContent>
+          </Step>
+        );
+      })}
+    </Stepper>
+
+    {/* Stepper content */}
+    
 
     {/* Stepper controls */}
     <Box sx={{ display: 'flex', flexDirection: 'row', pt: 2 }}>
