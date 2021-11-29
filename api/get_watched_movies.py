@@ -13,6 +13,7 @@ class handler(BaseHTTPRequestHandler):
     query = dict(parse.parse_qsl(parse.urlsplit(self.path).query))
     self.send_response(200)
     self.send_header('Content-type', 'application/json')
+    self.send_header('Access-Control-Allow-Origin', '*')
     self.end_headers()
     response_body = get_watched_movies(query["plex_token"], query["server_name"])
     self.wfile.write(str(jsonpickle.encode(response_body, indent=2)).encode())
