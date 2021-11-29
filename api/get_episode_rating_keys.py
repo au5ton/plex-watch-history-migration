@@ -57,7 +57,7 @@ class EpisodePostRequestBodyDTO:
     }  
 
 # see: https://stackoverflow.com/a/8187203
-class GuidRatingKeyPairDTO:
+class EpisodeGuidRatingKeyPairDTO:
   guid = str() # Used for globally identifying an episode across Plex servers
   ratingKey = int() # Used for individual episode scrobbling
   forServer = str() # Name of server this ratingKey is associated with
@@ -68,7 +68,7 @@ class GuidRatingKeyPairDTO:
   def __repr__(self):
     return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True)
 
-def get_tv_rating_keys(plex_token: str, server_name: str, request: EpisodePostRequestBodyDTO) -> list[GuidRatingKeyPairDTO]:
+def get_tv_rating_keys(plex_token: str, server_name: str, request: EpisodePostRequestBodyDTO) -> list[EpisodeGuidRatingKeyPairDTO]:
   account = MyPlexAccount(token=plex_token)
   # only the server we're looking for
   servers = [item for item in account.resources() if item.product == 'Plex Media Server' and item.name == server_name]
@@ -82,7 +82,7 @@ def get_tv_rating_keys(plex_token: str, server_name: str, request: EpisodePostRe
     if show.guid == request.showGuid:
       episodes: list[Episode] = show.episodes()
       return [
-        GuidRatingKeyPairDTO(
+        EpisodeGuidRatingKeyPairDTO(
           guid=item.guid,
           ratingKey=item.ratingKey,
           forServer=server_name,

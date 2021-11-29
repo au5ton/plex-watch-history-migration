@@ -9,6 +9,8 @@ from plexapi.server import PlexServer
 from plexapi.video import Episode
 from typing import Any
 
+import requests
+
 # get from dictionary with some safeguards
 def safeget(dic: dict, key: str, default: Any = None):
   return dic[key] if key in dic else default
@@ -45,7 +47,16 @@ class WatchedEpisodeDTO:
   def __repr__(self):
     return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True)
 
-def get_watched_tv(plex_token: str, server_name: str, skip=0, limit=10) -> list[WatchedEpisodeDTO]:
+class PaginatedResponseDTO:
+  watched: list[WatchedEpisodeDTO]
+  totalSize: int
+  def __init__(self, **kwargs):
+    for key, value in kwargs.items():
+      setattr(self, key, value)
+  def __repr__(self):
+    return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True)
+
+def get_watched_tv(plex_token: str, server_name: str, skip=0, limit=10) -> PaginatedResponseDTO:
   account = MyPlexAccount(token=plex_token)
   # only the server we're looking for
   servers = [item for item in account.resources() if item.product == 'Plex Media Server' and item.name == server_name]
@@ -54,9 +65,18 @@ def get_watched_tv(plex_token: str, server_name: str, skip=0, limit=10) -> list[
     server = servers[0]
     plex: PlexServer = server.connect()
     results: list[WatchedEpisodeDTO] = []
+    totalSize = 0
     # only "tv" libraries
     sections: list[ShowSection] = [item for item in plex.library.sections() if item.TYPE == 'show']
+
+    def fetch_total_size(key: int) -> int:
+      res = requests.get(f'{plex._baseurl}/library/sections/{key}/all?type=4&episode.unwatched!=1&X-Plex-Container-Start=0&X-Plex-Container-Size=2&X-Plex-Token={plex_token}', timeout=1, headers={"Accept": "application/json"})
+      totalSize = res.json()["MediaContainer"]["totalSize"]
+      return totalSize
+
+    # TODO: this doesn't work if you have multiple TV section libraries, so for now, just don't
     for section in sections:
+      totalSize = fetch_total_size(section.key)
       episodes: list[Episode] = section.search(unwatched=False, libtype='episode', includeGuids=True, container_start=skip, container_size=limit, maxresults=limit)
       results += [
         WatchedEpisodeDTO(
@@ -67,7 +87,7 @@ def get_watched_tv(plex_token: str, server_name: str, skip=0, limit=10) -> list[
           guid=item.guid)
         for item in episodes
       ]
-    return results
+    return PaginatedResponseDTO(watched=results, totalSize=totalSize)
   else:
     return []
 
