@@ -35,7 +35,7 @@ class handler(BaseHTTPRequestHandler):
       
 
 class ScrobblePostRequestBodyDTO:
-  episodeRatingKeys: list[int] = list() # List of rating keys to scrobble
+  ratingKeys: list[int] = list() # List of rating keys to scrobble
 
   def __init__(self, data: dict):
     validate(instance=data, schema=self._schema())
@@ -48,9 +48,9 @@ class ScrobblePostRequestBodyDTO:
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
-        "episodeRatingKeys": {"type": "array", "items": {"type": "integer"}},
+        "ratingKeys": {"type": "array", "items": {"type": "integer"}},
       },
-      "required": ["episodeRatingKeys"]
+      "required": ["ratingKeys"]
     }  
 
 def scrobble(plex_token: str, server_name: str, request: ScrobblePostRequestBodyDTO) -> list:
