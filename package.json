@@ -3,17 +3,22 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "NEXT_PUBLIC_VERCEL_ENV=$VERCEL_ENV next dev",
+    "build": "NEXT_PUBLIC_VERCEL_ENV=$VERCEL_ENV next build",
     "start": "next start"
   },
   "dependencies": {
+    "@mui/material": "^5.2.1",
     "next": "12.0.4",
     "plex-oauth": "^2.0.1",
     "react": "17.0.2",
-    "react-dom": "17.0.2"
+    "react-dom": "17.0.2",
+    "rooks": "^5.8.0",
+    "swr": "^1.0.1"
   },
   "devDependencies": {
+    "@emotion/react": "^11.7.0",
+    "@emotion/styled": "^11.6.0",
     "@types/react": "17.0.37",
     "typescript": "4.5.2"
   }
