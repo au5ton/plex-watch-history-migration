@@ -1,6 +1,13 @@
 import { gretch, GretchOptions } from 'gretchen'
 // Delay are exponential: 40ms, 1_600ms, 64_000ms
-const options: Partial<GretchOptions> = { retry: { attempts: 3, methods: ['GET', 'POST'], delay: 40 }};
+const options: Partial<GretchOptions> = {
+  retry: {
+    attempts: 3,
+    methods: ['GET', 'POST'],
+    delay: 40
+  },
+  timeout: 20000
+};
 
 export interface UserDTO {
   username: string;
