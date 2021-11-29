@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
+import Container from '@mui/material/Container'
 import { useLocalstorageState } from 'rooks'
 
 import { clientInformation } from '../lib/shared'
@@ -25,18 +26,18 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <main>
-        {
-          isSignedIn ?
-          <>
-            <Application />
-          </>
-          : 
-          <>
-            <p>You must sign into Plex before proceding. Redirecting...</p>
-          </>  
-        }
-      </main>
+      <Container maxWidth="lg" >
+      {
+        isSignedIn ?
+        <>
+          <Application />
+        </>
+        :
+        <>
+          <p>You must sign into Plex before proceding. Redirecting...</p>
+        </>
+      }
+      </Container>
     </div>
   )
 }
