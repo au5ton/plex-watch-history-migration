@@ -7,7 +7,7 @@ import Alert from '@mui/material/Alert'
 import AlertTitle from '@mui/material/AlertTitle'
 import Button from '@mui/material/Button'
 import InputLabel from '@mui/material/InputLabel'
-import Select from '@mui/material/Select'
+import Select, { SelectChangeEvent } from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import Stepper from '@mui/material/Stepper'
 import Step from '@mui/material/Step'
@@ -42,8 +42,8 @@ export function Application() {
   // step 1
   const [sourceServerName, setSourceServerName] = useState('') // default: ''
   const [destinationServerName, setDestinationServerName] = useState('') // default: ''
-  //const [sourceServer, setSourceServer] = useState<plex.PlexServerDTO>()
-  //const [destinationServer, setDestinationServer] = useState<plex.PlexServerDTO>()
+  const [sourceServer, setSourceServer] = useState<plex.PlexServerDTO>()
+  const [destinationServer, setDestinationServer] = useState<plex.PlexServerDTO>()
   // step 2
   const [step2ButtonLocked, setStep2ButtonLocked] = useState(false)
   const [sourceMovieHistory, setSourceMovieHistory] = useState<plex.WatchedMovieDTO[]>([]);
@@ -61,6 +61,16 @@ export function Application() {
   // step 5
   const [step5ButtonLocked, setStep5ButtonLocked] = useState(false)
   const [step5Done, setStep5Done] = useState(false)
+
+  const handleSourceServerChange = (event: SelectChangeEvent<string>) => {
+    setSourceServerName(event.target.value)
+    setSourceServer(servers?.find(e => e.name === event.target.value))
+  }
+
+  const handleDestinationServerChange = (event: SelectChangeEvent<string>) => {
+    setDestinationServerName(event.target.value)
+    setDestinationServer(servers?.find(e => e.name === event.target.value))
+  }
 
   const handleSignOut = () => {
     setAuthToken('')
@@ -213,7 +223,7 @@ export function Application() {
     if(activeStep === 0) {
       setNextButtonLocked(sourceServerName !== undefined && destinationServerName !== undefined && !(sourceServerName !== "" && destinationServerName !== ""))
     }
-  }, [activeStep, sourceServerName, destinationServerName])
+  }, [activeStep, sourceServer, destinationServer])
 
   const handleNextStep = () => {
     setNextButtonLocked(true)
@@ -228,7 +238,7 @@ export function Application() {
       <Select
         labelId="sourceServerName"
         value={sourceServerName}
-        onChange={e => setSourceServerName(e.target.value)}
+        onChange={handleSourceServerChange}
         displayEmpty
       >
         <MenuItem value="">
@@ -247,7 +257,7 @@ export function Application() {
       <Select
         labelId="destinationServerName"
         value={destinationServerName}
-        onChange={e => setDestinationServerName(e.target.value)}
+        onChange={handleDestinationServerChange}
         displayEmpty
       >
         <MenuItem value="">

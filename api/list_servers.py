@@ -21,13 +21,21 @@ class handler(BaseHTTPRequestHandler):
 
 class PlexServerDTO:
   name = str()
-  server_uri = str()
-  signature = str()
+  server_uri_jws = str()
   def __init__(self, **kwargs):
     for key, value in kwargs.items():
       setattr(self, key, value)
   def __repr__(self):
     return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True)
+
+# def verify_uri_signature(uri: str, signature: str) -> bool:
+#   from jose import jws
+#   try:
+#     # if the given signature fails to jws.verify(), an exception is thrown
+#     # if the given signature successfully jws.verify()s, then the value returned must match the URI given
+#     return jws.verify(signature, os.environ["JWS_SECRET"], algorithms=['HS256']).decode() == uri
+#   except:
+#     return False
 
 def list_servers(plex_token: str) -> list[PlexServerDTO]:
   account = MyPlexAccount(token=plex_token)
@@ -38,11 +46,10 @@ def list_servers(plex_token: str) -> list[PlexServerDTO]:
     # connect to the server to verify it works
     try:
       plex: PlexServer = server.connect(timeout=0.5)
-      signature = jws.sign(plex._baseurl.encode(), os.environ["JWS_SECRET"], algorithm='HS256')
+      uri_jws = jws.sign(plex._baseurl.encode(), os.environ["JWS_SECRET"], algorithm='HS256')
       results.append(PlexServerDTO(
         name=server.name,
-        server_uri=plex._baseurl,
-        signature=signature
+        server_uri_jws=uri_jws
         ))
     except:
       pass
