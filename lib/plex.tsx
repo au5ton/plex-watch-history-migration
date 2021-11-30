@@ -9,6 +9,12 @@ const options: Partial<GretchOptions> = {
   timeout: 20000
 };
 
+export interface PlexServerDTO {
+  name: string;
+  server_uri: string;
+  signature: string;
+}
+
 export interface UserDTO {
   username: string;
   email: string;

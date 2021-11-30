@@ -27,7 +27,7 @@ export function Application() {
   const [authToken, setAuthToken] = useLocalstorageState<string>('X_PLEX_TOKEN', '')
   const isSignedIn = authToken !== ''
   const { data: user } = useSWR<plex.UserDTO, any>(`/api/whoami?plex_token=${authToken}`, fetcher)
-  const { data: servers } = useSWR<string[], any>(`/api/list_servers?plex_token=${authToken}`, fetcher)
+  const { data: servers } = useSWR<plex.PlexServerDTO[], any>(`/api/list_servers?plex_token=${authToken}`, fetcher)
 
   const steps = [
     'Select servers to migrate to/from',
@@ -42,6 +42,8 @@ export function Application() {
   // step 1
   const [sourceServerName, setSourceServerName] = useState('') // default: ''
   const [destinationServerName, setDestinationServerName] = useState('') // default: ''
+  //const [sourceServer, setSourceServer] = useState<plex.PlexServerDTO>()
+  //const [destinationServer, setDestinationServer] = useState<plex.PlexServerDTO>()
   // step 2
   const [step2ButtonLocked, setStep2ButtonLocked] = useState(false)
   const [sourceMovieHistory, setSourceMovieHistory] = useState<plex.WatchedMovieDTO[]>([]);
@@ -209,7 +211,7 @@ export function Application() {
   // Input validation
   useEffect(() => {
     if(activeStep === 0) {
-      setNextButtonLocked(!(sourceServerName !== "" && destinationServerName !== ""))
+      setNextButtonLocked(sourceServerName !== undefined && destinationServerName !== undefined && !(sourceServerName !== "" && destinationServerName !== ""))
     }
   }, [activeStep, sourceServerName, destinationServerName])
 
@@ -233,8 +235,8 @@ export function Application() {
           ---
         </MenuItem>
         {servers?.map(e => 
-          <MenuItem key={e} value={e}>
-            {e}
+          <MenuItem key={e.name} value={e.name}>
+            {e.name}
           </MenuItem>
         )}
       </Select>
@@ -252,8 +254,8 @@ export function Application() {
           ---
         </MenuItem>
         {servers?.map(e => 
-          <MenuItem key={e} value={e}>
-            {e}
+          <MenuItem key={e.name} value={e.name}>
+            {e.name}
           </MenuItem>
         )}
       </Select>
