@@ -97,7 +97,7 @@ export function Application() {
     setStep3ButtonLocked(true)
 
     // get rating keys for movies
-    const semaphore = new AsyncSemaphore(3);
+    const semaphore = new AsyncSemaphore(2);
     for(let movie of sourceMovieHistory) {
       await semaphore.withLockRunAndForget(async () => {
         const res = await plex.get_movie_rating_key(authToken, destinationServerName, {

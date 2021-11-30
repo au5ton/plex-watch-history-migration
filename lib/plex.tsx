@@ -2,9 +2,9 @@ import { gretch, GretchOptions } from 'gretchen'
 // Delay are exponential: 40ms, 1_600ms, 64_000ms
 const options: Partial<GretchOptions> = {
   retry: {
-    attempts: 3,
+    attempts: 5, // was 3
     methods: ['GET', 'POST'],
-    delay: 40
+    delay: 15 // was 40
   },
   timeout: 20000
 };
