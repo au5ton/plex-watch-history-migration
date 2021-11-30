@@ -139,3 +139,20 @@ export async function scrobble(plex_token: string, server_name: string, request:
   }).json();
   return Array.isArray(data) ? data : [];
 }
+
+export interface OnDeckItemDTO {
+  title: string;
+  guid: string; // Either the guid for a movie or an episode
+  type: string; // Either "movie" or "episode"
+}
+
+export async function get_ondeck(plex_token: string, server_name: string): Promise<OnDeckItemDTO[]> {
+  let { data } = await gretch<OnDeckItemDTO[]>(`/api/get_ondeck?plex_token=${plex_token}&server_name=${server_name}`, options).json();
+  return Array.isArray(data) ? data : [];
+}
+
+// will return "200" for a successful remove and "404" for an invalid rating_key
+export async function remove_from_continue_watching(plex_token: string, server_name: string, rating_key: number): Promise<string | undefined> {
+  let { data } = await gretch<string>(`/api/remove_from_continue_watching?plex_token=${plex_token}&server_name=${server_name}&rating_key=${rating_key}`, options).json();
+  return data;
+}
