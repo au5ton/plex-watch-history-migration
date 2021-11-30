@@ -12,6 +12,7 @@ import Stepper from '@mui/material/Stepper'
 import Step from '@mui/material/Step'
 import StepLabel from '@mui/material/StepLabel'
 import StepContent from '@mui/material/StepContent'
+import LogoutIcon from '@mui/icons-material/Logout'
 import { chunkArray, fetcher } from '../lib/shared'
 import * as plex from '../lib/plex'
 import { LinearProgressWithLabel } from './progress'
@@ -301,7 +302,7 @@ export function Application() {
       Signed in as: <code>{user?.username}</code> or <code>{user?.email}</code>.
     </p>
     <p>
-    <Button variant="contained" size="small" onClick={handleSignOut} disabled={activeStep > 0}>Sign Out</Button>
+    <Button variant="contained" size="small" onClick={handleSignOut} disabled={activeStep > 0} startIcon={<LogoutIcon />}>Sign Out</Button>
     </p>
     
     {/* Stepper indicator */}

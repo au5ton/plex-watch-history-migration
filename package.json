@@ -8,6 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@mui/icons-material": "^5.2.0",
     "@mui/material": "^5.2.1",
     "gretchen": "^1.5.0",
     "next": "^11.1.2",
