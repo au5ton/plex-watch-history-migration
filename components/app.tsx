@@ -4,6 +4,7 @@ import useSWR from 'swr'
 import { useLocalstorageState } from 'rooks'
 import Box from '@mui/material/Box'
 import Alert from '@mui/material/Alert'
+import AlertTitle from '@mui/material/AlertTitle'
 import Button from '@mui/material/Button'
 import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
@@ -13,14 +14,13 @@ import Step from '@mui/material/Step'
 import StepLabel from '@mui/material/StepLabel'
 import StepContent from '@mui/material/StepContent'
 import LogoutIcon from '@mui/icons-material/Logout'
+import CircularProgress from '@mui/material/CircularProgress'
+import Chip from '@mui/material/Chip'
+import CheckIcon from '@mui/icons-material/Check'
 import { chunkArray, fetcher } from '../lib/shared'
 import * as plex from '../lib/plex'
 import { LinearProgressWithLabel } from './progress'
 import { AsyncSemaphore } from '../lib/AsyncSemaphore'
-
-// when running "npm run dev", the python functions don't execute, so we have to use prod when developing locally
-// EDIT: Not actually necessary, just use "vercel dev" instead of "yarn dev"
-//const BASE_URL = environment === 'development' ? 'https://plex-watch-history-migration-au5ton.vercel.app' : ''
 
 export function Application() {
   const router = useRouter()
@@ -29,7 +29,13 @@ export function Application() {
   const { data: user } = useSWR<plex.UserDTO, any>(`/api/whoami?plex_token=${authToken}`, fetcher)
   const { data: servers } = useSWR<string[], any>(`/api/list_servers?plex_token=${authToken}`, fetcher)
 
-  const steps = ['Select servers to migrate to/from', 'Download watch history from old server', 'Connect references to new server', 'Mark as watched on new server'];
+  const steps = [
+    'Select servers to migrate to/from',
+    'Download watch history from old server',
+    'Connect references to new server',
+    'Mark as watched on new server',
+    `Clean up "Continue Watching" on new server`
+  ];
   const [activeStep, setActiveStep] = useState(0)
   const [nextButtonLocked, setNextButtonLocked] = useState(true)
 
@@ -50,6 +56,9 @@ export function Application() {
   const [step4ButtonLocked, setStep4ButtonLocked] = useState(false)
   const [completedScrobbles, setCompletedScrobbles] = useState(0)
   const [step4Done, setStep4Done] = useState(false)
+  // step 5
+  const [step5ButtonLocked, setStep5ButtonLocked] = useState(false)
+  const [step5Done, setStep5Done] = useState(false)
 
   const handleSignOut = () => {
     setAuthToken('')
@@ -169,6 +178,31 @@ export function Application() {
 
     // final indicators
     setStep4Done(true)
+    setNextButtonLocked(false)
+  }
+
+  const handleStep5 = async () => {
+    // prevent spam
+    setStep5ButtonLocked(true)
+
+    // get source "on deck"
+    const sourceDeck = await plex.get_continue_watching(authToken, sourceServerName);
+    // get destination "on deck"
+    const destDeck = await plex.get_continue_watching(authToken, destinationServerName);
+    // calculate the rating keys to remove 
+    const toRemove = destDeck
+      // only the shows in the sourceDeck are allowed to stay in the destDeck,
+      // so remove everything that isn't in the sourceDeck
+      .filter(e => ! sourceDeck.map(e => e.grandparentGuid).includes(e.grandparentGuid))
+      // we only want the rating keys in order to remove them
+      .map(e => e.episodeRatingKey);
+
+    for(let ratingKey of toRemove) {
+      await plex.remove_from_continue_watching(authToken, destinationServerName, ratingKey);
+    }
+
+    // final indicators
+    setStep5Done(true)
     setNextButtonLocked(false)
   }
 
@@ -296,8 +330,27 @@ export function Application() {
     </Box>
   )
 
+  const step5Content = (
+    <Box sx={{ display: 'block' }}>
+      <Box sx={{ display: step5ButtonLocked ? 'block' : 'none', maxWidth: 600 }}>
+        <InputLabel id="watchLaterPrune">
+          Pruning extra content from "Continue Watching"...
+        </InputLabel>
+        { !step5Done ? <CircularProgress sx={{ m: 2 }} /> : null }
+        { step5Done ? <Chip icon={<CheckIcon />} label="Pruning successful!" color="success" sx={{ mt: 2, mb: 2 }} /> : null }
+      </Box>
+      <Button variant="contained" size="small" onClick={handleStep5} disabled={step5ButtonLocked}>Start Pruning</Button>
+    </Box>
+  )
+
   return (
     <>
+    <Alert severity="warning" sx={{ mb: 2, maxWidth: 600 }}>
+      <AlertTitle>Disclaimer</AlertTitle>
+      This may not work perfectly.
+      There are numerous factors and limitations that affect how this works, especially metadata differences between the two Plex servers.
+      <strong>You may need to make manual corrections on your own, but hopefully this works well enough for most people!</strong>
+    </Alert>
     <p>
       Signed in as: <code>{user?.username}</code> or <code>{user?.email}</code>.
     </p>
@@ -316,6 +369,7 @@ export function Application() {
               { index === 1 ? step2Content : null }
               { index === 2 ? step3Content : null }
               { index === 3 ? step4Content : null }
+              { index === 4 ? step5Content : null }
             </StepContent>
           </Step>
         );

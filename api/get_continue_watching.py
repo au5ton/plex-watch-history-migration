@@ -20,7 +20,7 @@ class handler(BaseHTTPRequestHandler):
     self.send_header('Content-type', 'application/json')
     self.send_header('Access-Control-Allow-Origin', '*')
     self.end_headers()
-    response_body = get_ondeck(
+    response_body = get_continue_watching(
       query["plex_token"],
       query["server_name"]
       )
@@ -28,17 +28,18 @@ class handler(BaseHTTPRequestHandler):
     return
 
 # see: https://stackoverflow.com/a/8187203
-class OnDeckItemDTO:
-  title = str()
-  guid = str() # Either the guid for a movie or an episode
-  type = str() # Either "movie" or "episode"
+class OnDeckShowDTO:
+  grandparentTitle = str()
+  grandparentGuid = str()
+  episodeRatingKey = int() # ratingKey of the episode that appeared in the hub
+  server = str() # Server name where this came from (because rating keys are unique to the server)
   def __init__(self, **kwargs):
     for key, value in kwargs.items():
       setattr(self, key, value)
   def __repr__(self):
     return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True)
 
-def get_ondeck(plex_token: str, server_name: str) -> list[OnDeckItemDTO]:
+def get_continue_watching(plex_token: str, server_name: str) -> list[OnDeckShowDTO]:
   account = MyPlexAccount(token=plex_token)
   # only the server we're looking for
   servers = [item for item in account.resources() if item.product == 'Plex Media Server' and item.name == server_name]
@@ -46,16 +47,29 @@ def get_ondeck(plex_token: str, server_name: str) -> list[OnDeckItemDTO]:
     # first server with matching name
     server = servers[0]
     plex: PlexServer = server.connect()
-    results: list[OnDeckItemDTO] = []
-    sections: list[LibrarySection] = plex.library.sections()
-    # for all sections
-    for section in sections:
-      # save the "on deck" items and what type of content they are
-      results += [OnDeckItemDTO(title=item.title, guid=item.guid, type=item.type) for item in section.onDeck()]
+    results: list[OnDeckShowDTO] = []
+
+    # xml response
+    res = plex.query('/hubs/continueWatching')
+    # locals named after XML <tag>
+    hub = res[0]
+    for video in hub:
+      type = video.get('type')
+      if type == 'episode':
+        grandparentTitle = video.get('grandparentTitle')
+        grandparentGuid = video.get('grandparentGuid')
+        ratingKey = video.get('ratingKey')
+        results.append(OnDeckShowDTO(
+          grandparentTitle=grandparentTitle,
+          grandparentGuid=grandparentGuid,
+          episodeRatingKey=ratingKey,
+          server=server_name
+          ))
+
     return results
   else:
     return []
 
 if __name__ == "__main__":
   #print(get_watched_movies(plex_token=os.environ["X_PLEX_TOKEN"], server_name="mars"))
-  print(str(jsonpickle.encode(get_ondeck(plex_token=os.environ["X_PLEX_TOKEN"], server_name="mars"), indent=2)))
+  print(str(jsonpickle.encode(get_continue_watching(plex_token=os.environ["X_PLEX_TOKEN"], server_name="mars"), indent=2)))

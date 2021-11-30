@@ -140,14 +140,15 @@ export async function scrobble(plex_token: string, server_name: string, request:
   return Array.isArray(data) ? data : [];
 }
 
-export interface OnDeckItemDTO {
-  title: string;
-  guid: string; // Either the guid for a movie or an episode
-  type: string; // Either "movie" or "episode"
+export interface OnDeckShowDTO {
+  grandparentTitle: string;
+  grandparentGuid: string;
+  episodeRatingKey: number; // ratingKey of the episode that appeared in the hub
+  server: string; // Server name where this came from (because rating keys are unique to the server)
 }
 
-export async function get_ondeck(plex_token: string, server_name: string): Promise<OnDeckItemDTO[]> {
-  let { data } = await gretch<OnDeckItemDTO[]>(`/api/get_ondeck?plex_token=${plex_token}&server_name=${server_name}`, options).json();
+export async function get_continue_watching(plex_token: string, server_name: string): Promise<OnDeckShowDTO[]> {
+  let { data } = await gretch<OnDeckShowDTO[]>(`/api/get_continue_watching?plex_token=${plex_token}&server_name=${server_name}`, options).json();
   return Array.isArray(data) ? data : [];
 }
 
