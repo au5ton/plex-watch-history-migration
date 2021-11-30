@@ -156,20 +156,17 @@ export function Application() {
     setStep4ButtonLocked(true)
 
     // do the thing
-    const semaphore = new AsyncSemaphore(2);
-    const chunkSize = Math.floor(scrobbles.length / 50)
-    for(let chunk of chunkArray(scrobbles, chunkSize)) {
-      await semaphore.withLockRunAndForget(async () => {
-        const res = await plex.scrobble(authToken, destinationServerName, {
-          ratingKeys: chunk
-        })
-        // count the number of successes
-        setCompletedScrobbles(prev => prev + res.filter(e => typeof e === 'number' && e >= 200 && e <= 299).length)
+    const chunkSize = 5;
+    const chunkCount = Math.floor(scrobbles.length / chunkSize)
+    for(let chunk of chunkArray(scrobbles, chunkCount)) {
+      const res = await plex.scrobble(authToken, destinationServerName, {
+        ratingKeys: chunk
       })
+      // count the number of successes
+      setCompletedScrobbles(prev => prev + res.filter(e => typeof e === 'number' && e >= 200 && e <= 299).length)
     }
 
     // final indicators
-    await semaphore.awaitTerminate()
     setStep4Done(true)
     setNextButtonLocked(false)
   }
