@@ -30,8 +30,8 @@ export interface WatchedMovieDTO {
   guid: string;
 }
 
-export async function get_watched_movies(plex_token: string, server_name: string, skip: number = 0, limit: number = 10): Promise<PaginatedResponseDTO<WatchedMovieDTO>> {
-  let { data } = await gretch<PaginatedResponseDTO<WatchedMovieDTO>>(`/api/get_watched_movies?plex_token=${plex_token}&server_name=${server_name}&skip=${skip}&limit=${limit}`, options).json();
+export async function get_watched_movies(plex_token: string, server_jws: string, skip: number = 0, limit: number = 10): Promise<PaginatedResponseDTO<WatchedMovieDTO>> {
+  let { data } = await gretch<PaginatedResponseDTO<WatchedMovieDTO>>(`/api/get_watched_movies?plex_token=${plex_token}&server_jws=${server_jws}&skip=${skip}&limit=${limit}`, options).json();
   return data as PaginatedResponseDTO<WatchedMovieDTO>;
 }
 
@@ -57,8 +57,8 @@ export interface WatchedEpisodeDTO {
   guid: string;
 }
 
-export async function get_watched_tv(plex_token: string, server_name: string, skip: number = 0, limit: number = 10): Promise<PaginatedResponseDTO<WatchedEpisodeDTO>> {
-  let { data } = await gretch<PaginatedResponseDTO<WatchedEpisodeDTO>>(`/api/get_watched_tv?plex_token=${plex_token}&server_name=${server_name}&skip=${skip}&limit=${limit}`, options).json();
+export async function get_watched_tv(plex_token: string, server_jws: string, skip: number = 0, limit: number = 10): Promise<PaginatedResponseDTO<WatchedEpisodeDTO>> {
+  let { data } = await gretch<PaginatedResponseDTO<WatchedEpisodeDTO>>(`/api/get_watched_tv?plex_token=${plex_token}&server_jws=${server_jws}&skip=${skip}&limit=${limit}`, options).json();
   return data as PaginatedResponseDTO<WatchedEpisodeDTO>;
 }
 
@@ -89,8 +89,8 @@ export interface GuidRatingKeyPairDTO extends GuidRatingKeyPairPrimitiveDTO {
   title: string;
 }
 
-export async function get_movie_rating_key(plex_token: string, server_name: string, request: MoviePostRequestBodyDTO): Promise<GuidRatingKeyPairDTO | null | undefined> {
-  let { data } = await gretch<GuidRatingKeyPairDTO>(`/api/get_movie_rating_key?plex_token=${plex_token}&server_name=${server_name}`, {
+export async function get_movie_rating_key(plex_token: string, server_jws: string, request: MoviePostRequestBodyDTO): Promise<GuidRatingKeyPairDTO | null | undefined> {
+  let { data } = await gretch<GuidRatingKeyPairDTO>(`/api/get_movie_rating_key?plex_token=${plex_token}&server_jws=${server_jws}`, {
     method: 'POST',
     body: JSON.stringify(request),
     ...options
@@ -103,8 +103,8 @@ export interface ShowPostRequestBodyDTO {
   grandparentGuid: string;
 }
 
-export async function get_show_rating_key(plex_token: string, server_name: string, request: ShowPostRequestBodyDTO): Promise<GuidRatingKeyPairDTO | null | undefined> {
-  let { data } = await gretch<GuidRatingKeyPairDTO>(`/api/get_show_rating_key?plex_token=${plex_token}&server_name=${server_name}`, {
+export async function get_show_rating_key(plex_token: string, server_jws: string, request: ShowPostRequestBodyDTO): Promise<GuidRatingKeyPairDTO | null | undefined> {
+  let { data } = await gretch<GuidRatingKeyPairDTO>(`/api/get_show_rating_key?plex_token=${plex_token}&server_jws=${server_jws}`, {
     method: 'POST',
     body: JSON.stringify(request),
     ...options
@@ -119,12 +119,11 @@ export interface EpisodePostRequestBodyDTO {
 }
 
 export interface EpisodeGuidRatingKeyPairDTO extends GuidRatingKeyPairPrimitiveDTO {
-  forServer: string;
   formatted: string;
 }
 
-export async function get_episode_rating_keys(plex_token: string, server_name: string, request: EpisodePostRequestBodyDTO): Promise<EpisodeGuidRatingKeyPairDTO[]> {
-  let { data } = await gretch<EpisodeGuidRatingKeyPairDTO[]>(`/api/get_episode_rating_keys?plex_token=${plex_token}&server_name=${server_name}`, {
+export async function get_episode_rating_keys(plex_token: string, server_jws: string, request: EpisodePostRequestBodyDTO): Promise<EpisodeGuidRatingKeyPairDTO[]> {
+  let { data } = await gretch<EpisodeGuidRatingKeyPairDTO[]>(`/api/get_episode_rating_keys?plex_token=${plex_token}&server_jws=${server_jws}`, {
     method: 'POST',
     body: JSON.stringify(request),
     ...options
@@ -136,8 +135,8 @@ export interface ScrobblePostRequestBodyDTO {
   ratingKeys: number[];
 }
 
-export async function scrobble(plex_token: string, server_name: string, request: ScrobblePostRequestBodyDTO): Promise<(number|string)[]> {
-  let { data } = await gretch<Array<number|string>>(`/api/scrobble?plex_token=${plex_token}&server_name=${server_name}`, {
+export async function scrobble(plex_token: string, server_jws: string, request: ScrobblePostRequestBodyDTO): Promise<(number|string)[]> {
+  let { data } = await gretch<Array<number|string>>(`/api/scrobble?plex_token=${plex_token}&server_jws=${server_jws}`, {
     method: 'POST',
     body: JSON.stringify(request),
     ...options
@@ -149,16 +148,15 @@ export interface OnDeckShowDTO {
   grandparentTitle: string;
   grandparentGuid: string;
   episodeRatingKey: number; // ratingKey of the episode that appeared in the hub
-  server: string; // Server name where this came from (because rating keys are unique to the server)
 }
 
-export async function get_continue_watching(plex_token: string, server_name: string): Promise<OnDeckShowDTO[]> {
-  let { data } = await gretch<OnDeckShowDTO[]>(`/api/get_continue_watching?plex_token=${plex_token}&server_name=${server_name}`, options).json();
+export async function get_continue_watching(plex_token: string, server_jws: string): Promise<OnDeckShowDTO[]> {
+  let { data } = await gretch<OnDeckShowDTO[]>(`/api/get_continue_watching?plex_token=${plex_token}&server_jws=${server_jws}`, options).json();
   return Array.isArray(data) ? data : [];
 }
 
 // will return "200" for a successful remove and "404" for an invalid rating_key
-export async function remove_from_continue_watching(plex_token: string, server_name: string, rating_key: number): Promise<string | undefined> {
-  let { data } = await gretch<string>(`/api/remove_from_continue_watching?plex_token=${plex_token}&server_name=${server_name}&rating_key=${rating_key}`, options).json();
+export async function remove_from_continue_watching(plex_token: string, server_jws: string, rating_key: number): Promise<string | undefined> {
+  let { data } = await gretch<string>(`/api/remove_from_continue_watching?plex_token=${plex_token}&server_jws=${server_jws}&rating_key=${rating_key}`, options).json();
   return data;
 }

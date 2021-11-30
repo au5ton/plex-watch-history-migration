@@ -42,8 +42,8 @@ export function Application() {
   // step 1
   const [sourceServerName, setSourceServerName] = useState('') // default: ''
   const [destinationServerName, setDestinationServerName] = useState('') // default: ''
-  const [sourceServer, setSourceServer] = useState<plex.PlexServerDTO>()
-  const [destinationServer, setDestinationServer] = useState<plex.PlexServerDTO>()
+  const [sourceServer, setSourceServer] = useState<plex.PlexServerDTO>(undefined as any)
+  const [destinationServer, setDestinationServer] = useState<plex.PlexServerDTO>(undefined as any)
   // step 2
   const [step2ButtonLocked, setStep2ButtonLocked] = useState(false)
   const [sourceMovieHistory, setSourceMovieHistory] = useState<plex.WatchedMovieDTO[]>([]);
@@ -64,12 +64,12 @@ export function Application() {
 
   const handleSourceServerChange = (event: SelectChangeEvent<string>) => {
     setSourceServerName(event.target.value)
-    setSourceServer(servers?.find(e => e.name === event.target.value))
+    setSourceServer(servers?.find(e => e.name === event.target.value) as any)
   }
 
   const handleDestinationServerChange = (event: SelectChangeEvent<string>) => {
     setDestinationServerName(event.target.value)
-    setDestinationServer(servers?.find(e => e.name === event.target.value))
+    setDestinationServer(servers?.find(e => e.name === event.target.value) as any)
   }
 
   const handleSignOut = () => {
@@ -82,8 +82,8 @@ export function Application() {
     setStep2ButtonLocked(true)
 
     // get+set totals
-    setSourceMovieHistoryTotalSize((await plex.get_watched_movies(authToken, sourceServerName, 0, 2)).totalSize);
-    setSourceShowHistoryTotalSize((await plex.get_watched_tv(authToken, sourceServerName, 0, 2)).totalSize);
+    setSourceMovieHistoryTotalSize((await plex.get_watched_movies(authToken, sourceServer.server_uri_jws, 0, 2)).totalSize);
+    setSourceShowHistoryTotalSize((await plex.get_watched_tv(authToken, sourceServer.server_uri_jws, 0, 2)).totalSize);
 
     // download movies
     await (async () => {
@@ -91,7 +91,7 @@ export function Application() {
       let skip = 0;
       const chunkLimit = 100; // TODO: make more user controlled
       do {
-        last_res = await plex.get_watched_movies(authToken, sourceServerName, skip, chunkLimit);
+        last_res = await plex.get_watched_movies(authToken, sourceServer.server_uri_jws, skip, chunkLimit);
         setSourceMovieHistory(prev => [...prev, ...last_res.watched])
         skip += last_res.watched.length;
       }
@@ -104,7 +104,7 @@ export function Application() {
       let skip = 0;
       const chunkLimit = 100; // TODO: make more user controlled
       do {
-        last_res = await plex.get_watched_tv(authToken, sourceServerName, skip, chunkLimit);
+        last_res = await plex.get_watched_tv(authToken, sourceServer.server_uri_jws, skip, chunkLimit);
         setSourceShowHistory(prev => [...prev, ...last_res.watched])
         skip += last_res.watched.length;
       }
@@ -122,7 +122,7 @@ export function Application() {
     const semaphore = new AsyncSemaphore(2);
     for(let movie of sourceMovieHistory) {
       await semaphore.withLockRunAndForget(async () => {
-        const res = await plex.get_movie_rating_key(authToken, destinationServerName, {
+        const res = await plex.get_movie_rating_key(authToken, destinationServer.server_uri_jws, {
           movieTitle: movie.title,
           movieGuid: movie.guid,
         })
@@ -146,7 +146,7 @@ export function Application() {
     // get rating keys for shows, for querying individual episodes
     for(let show of unique_shows) {
       await semaphore.withLockRunAndForget(async () => {
-        const res = await plex.get_show_rating_key(authToken, destinationServerName, show)
+        const res = await plex.get_show_rating_key(authToken, destinationServer.server_uri_jws, show)
 
         if(res) {
           const showRatingKey = res.ratingKey
@@ -156,7 +156,7 @@ export function Application() {
             .filter(e => e.grandparentGuid === show.grandparentGuid)
             .map(e => e.guid);
           
-          const res2 = await plex.get_episode_rating_keys(authToken, destinationServerName, {
+          const res2 = await plex.get_episode_rating_keys(authToken, destinationServer.server_uri_jws, {
             showRatingKey,
             showGuid: show.grandparentGuid,
             watchedEpisodes,
@@ -181,7 +181,7 @@ export function Application() {
     const chunkSize = 5;
     const chunkCount = Math.floor(scrobbles.length / chunkSize)
     for(let chunk of chunkArray(scrobbles, chunkCount)) {
-      const res = await plex.scrobble(authToken, destinationServerName, {
+      const res = await plex.scrobble(authToken, destinationServer.server_uri_jws, {
         ratingKeys: chunk
       })
       // count the number of successes
@@ -198,9 +198,9 @@ export function Application() {
     setStep5ButtonLocked(true)
 
     // get source "on deck"
-    const sourceDeck = await plex.get_continue_watching(authToken, sourceServerName);
+    const sourceDeck = await plex.get_continue_watching(authToken, sourceServer.server_uri_jws);
     // get destination "on deck"
-    const destDeck = await plex.get_continue_watching(authToken, destinationServerName);
+    const destDeck = await plex.get_continue_watching(authToken, destinationServer.server_uri_jws);
     // calculate the rating keys to remove 
     const toRemove = destDeck
       // only the shows in the sourceDeck are allowed to stay in the destDeck,
@@ -210,7 +210,7 @@ export function Application() {
       .map(e => e.episodeRatingKey);
 
     for(let ratingKey of toRemove) {
-      await plex.remove_from_continue_watching(authToken, destinationServerName, ratingKey);
+      await plex.remove_from_continue_watching(authToken, destinationServer.server_uri_jws, ratingKey);
     }
 
     // final indicators
@@ -221,7 +221,7 @@ export function Application() {
   // Input validation
   useEffect(() => {
     if(activeStep === 0) {
-      setNextButtonLocked(sourceServerName !== undefined && destinationServerName !== undefined && !(sourceServerName !== "" && destinationServerName !== ""))
+      setNextButtonLocked(sourceServer !== undefined && destinationServer !== undefined && !(sourceServerName !== "" && destinationServerName !== ""))
     }
   }, [activeStep, sourceServer, destinationServer])
 

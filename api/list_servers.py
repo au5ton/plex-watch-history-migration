@@ -28,14 +28,14 @@ class PlexServerDTO:
   def __repr__(self):
     return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True)
 
-# def verify_uri_signature(uri: str, signature: str) -> bool:
-#   from jose import jws
-#   try:
-#     # if the given signature fails to jws.verify(), an exception is thrown
-#     # if the given signature successfully jws.verify()s, then the value returned must match the URI given
-#     return jws.verify(signature, os.environ["JWS_SECRET"], algorithms=['HS256']).decode() == uri
-#   except:
-#     return False
+def verify_uri(server_jws: str) -> str:
+  from jose import jws
+  try:
+    # if the given signature fails to jws.verify(), an exception is thrown
+    # if the given signature successfully jws.verify()s, then the value returned must match the URI given
+    return jws.verify(server_jws, os.environ["JWS_SECRET"], algorithms=['HS256']).decode()
+  except:
+    return ""
 
 def list_servers(plex_token: str) -> list[PlexServerDTO]:
   account = MyPlexAccount(token=plex_token)

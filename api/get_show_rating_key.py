@@ -26,11 +26,19 @@ class handler(BaseHTTPRequestHandler):
     self.end_headers()
     response_body = get_show_rating_key(
       query["plex_token"],
-      query["server_name"],
+      query["server_jws"],
       request=data,
       )
     self.wfile.write(str(jsonpickle.encode(response_body)).encode())
-      
+
+def verify_uri(server_jws: str) -> str:
+  from jose import jws
+  try:
+    # if the given signature fails to jws.verify(), an exception is thrown
+    # if the given signature successfully jws.verify()s, then the value returned must match the URI given
+    return jws.verify(server_jws, os.environ["JWS_SECRET"], algorithms=['HS256']).decode()
+  except:
+    return ""
 
 class ShowPostRequestBodyDTO:
   grandparentTitle = str() # Name of the show for the episode
@@ -64,14 +72,10 @@ class ShowGuidRatingKeyPairDTO:
   def __repr__(self):
     return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True)
 
-def get_show_rating_key(plex_token: str, server_name: str, request: ShowPostRequestBodyDTO) -> ShowGuidRatingKeyPairDTO:
-  account = MyPlexAccount(token=plex_token)
-  # only the server we're looking for
-  servers = [item for item in account.resources() if item.product == 'Plex Media Server' and item.name == server_name]
-  if len(servers) > 0:
-    # first server with matching name
-    server = servers[0]
-    plex: PlexServer = server.connect()  
+def get_show_rating_key(plex_token: str, server_jws: str, request: ShowPostRequestBodyDTO) -> ShowGuidRatingKeyPairDTO:
+  if verify_uri(server_jws) != "":
+    # connect to server directly
+    plex = PlexServer(verify_uri(server_jws), plex_token)
     # plex's database is indexed for searching, so lets search with the title we have
     shows: list[Show] = plex.library.search(title=request.grandparentTitle, libtype='show')
     # iterate over the results for an identical guid
@@ -93,7 +97,7 @@ if __name__ == "__main__":
   #   "grandparentGuid": "plex://show/5d9c07fc0aaccd001f8ec1ba",
   # })), indent=2)))
 
-  print(str(jsonpickle.encode(get_show_rating_key(plex_token=os.environ["X_PLEX_TOKEN"], server_name="mars", request=ShowPostRequestBodyDTO({
+  print(str(jsonpickle.encode(get_show_rating_key(plex_token=os.environ["X_PLEX_TOKEN"], server_jws="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.FOO.BAR", request=ShowPostRequestBodyDTO({
     "grandparentTitle": "Adventure Time",
     "grandparentGuid": "plex://show/5d9c07f72df347001e3a70b4",
   })), indent=2)))

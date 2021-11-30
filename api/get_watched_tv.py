@@ -25,7 +25,7 @@ class handler(BaseHTTPRequestHandler):
     self.end_headers()
     response_body = get_watched_tv(
       query["plex_token"],
-      query["server_name"],
+      query["server_jws"],
       skip=int(safeget(query, "skip", default=0)),
       limit=int(safeget(query, "limit", default=10))
       )
@@ -56,14 +56,19 @@ class PaginatedResponseDTO:
   def __repr__(self):
     return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True)
 
-def get_watched_tv(plex_token: str, server_name: str, skip=0, limit=10) -> PaginatedResponseDTO:
-  account = MyPlexAccount(token=plex_token)
-  # only the server we're looking for
-  servers = [item for item in account.resources() if item.product == 'Plex Media Server' and item.name == server_name]
-  if len(servers) > 0:
-    # first server with matching name
-    server = servers[0]
-    plex: PlexServer = server.connect()
+def verify_uri(server_jws: str) -> str:
+  from jose import jws
+  try:
+    # if the given signature fails to jws.verify(), an exception is thrown
+    # if the given signature successfully jws.verify()s, then the value returned must match the URI given
+    return jws.verify(server_jws, os.environ["JWS_SECRET"], algorithms=['HS256']).decode()
+  except:
+    return ""
+
+def get_watched_tv(plex_token: str, server_jws: str, skip=0, limit=10) -> PaginatedResponseDTO:
+  if verify_uri(server_jws) != "":
+    # connect to server directly
+    plex = PlexServer(verify_uri(server_jws), plex_token)
     results: list[WatchedEpisodeDTO] = []
     totalSize = 0
     # only "tv" libraries
@@ -93,4 +98,4 @@ def get_watched_tv(plex_token: str, server_name: str, skip=0, limit=10) -> Pagin
 
 if __name__ == "__main__":
   #print(get_watched_movies(plex_token=os.environ["X_PLEX_TOKEN"], server_name="mars"))
-  print(str(jsonpickle.encode(get_watched_tv(plex_token=os.environ["X_PLEX_TOKEN"], server_name="mars"), indent=2)))
+  print(str(jsonpickle.encode(get_watched_tv(plex_token=os.environ["X_PLEX_TOKEN"], server_jws="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.FOO.BAR"), indent=2)))
