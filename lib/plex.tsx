@@ -12,6 +12,7 @@ const options: Partial<GretchOptions> = {
 export interface PlexServerDTO {
   name: string;
   server_uri_jws: string;
+  server_token: string;
 }
 
 export interface UserDTO {

@@ -22,6 +22,7 @@ class handler(BaseHTTPRequestHandler):
 class PlexServerDTO:
   name = str()
   server_uri_jws = str()
+  server_token = str()
   def __init__(self, **kwargs):
     for key, value in kwargs.items():
       setattr(self, key, value)
@@ -49,7 +50,8 @@ def list_servers(plex_token: str) -> list[PlexServerDTO]:
       uri_jws = jws.sign(plex._baseurl.encode(), os.environ["JWS_SECRET"], algorithm='HS256')
       results.append(PlexServerDTO(
         name=server.name,
-        server_uri_jws=uri_jws
+        server_uri_jws=uri_jws,
+        server_token=plex._token
         ))
     except:
       pass
