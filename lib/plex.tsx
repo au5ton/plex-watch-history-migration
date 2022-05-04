@@ -161,3 +161,8 @@ export async function remove_from_continue_watching(plex_token: string, server_j
   let { data } = await gretch<string>(`/api/remove_from_continue_watching?plex_token=${plex_token}&server_jws=${server_jws}&rating_key=${rating_key}`, options).json();
   return data;
 }
+
+export async function get_show_episodes(plex_token: string, server_jws: string, rating_key: string): Promise<WatchedEpisodeDTO[]> {
+  let { data } = await gretch<WatchedEpisodeDTO[]>(`/api/get_show_episodes?plex_token=${plex_token}&server_jws=${server_jws}&rating_key=${rating_key}`, options).json();
+  return Array.isArray(data) ? data : [];
+}
